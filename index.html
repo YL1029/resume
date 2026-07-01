@@ -1059,25 +1059,42 @@ function saveResume() {
   }
 }
 
-function exportMD() {
+async function exportMD() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const ts = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
   const name = (activeProfile().name || 'resume').replace(/[\\/:*?"<>|]/g, '_');
   const filename = 'resume_' + name + '_' + ts + '.md';
-  downloadMD(filename);
-  showToast('已导出 ' + filename, true);
-}
 
-function downloadMD(filename) {
   const md = buildMarkdown();
   const blob = new Blob(['﻿' + md], { type: 'text/markdown;charset=utf-8' });
+
+  // Try File System Access API for native "Save As" dialog
+  try {
+    if (typeof window.showSaveFilePicker === 'function') {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      showToast('已保存 ' + filename, true);
+      return;
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return; // user cancelled
+    // Fall through to fallback
+  }
+
+  // Fallback: auto-download
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename || 'resume-data.md';
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+  showToast('已导出 ' + filename, true);
 }
 
 function importMD() {
