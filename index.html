@@ -328,7 +328,10 @@
       <span class="icon">📂</span> 导入
     </button>
     <button class="btn btn-outline btn-sm" onclick="exportMD()" title="导出为 .md 文件">
-      <span class="icon">📥</span> 导出
+      <span class="icon">📥</span> 导出 MD
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="exportPDF()" title="预览并导出为 PDF">
+      <span class="icon">📄</span> 简历预览
     </button>
     <button class="btn btn-primary btn-sm has-unsaved" id="saveBtn" onclick="saveResume()" title="保存到本地存储">
       <span class="icon">💾</span> 保存
@@ -1095,6 +1098,214 @@ async function exportMD() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('已导出 ' + filename, true);
+}
+
+async function exportPDF() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ts = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+  const name = (activeProfile().name || 'resume').replace(/[\\/:*?"<>|]/g, '_');
+  const filename = 'resume_' + name + '_' + ts + '.pdf';
+
+  const html = buildResumeHTML();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const w = window.open(url, '_blank');
+  if (w) {
+    w.addEventListener('DOMContentLoaded', function() {
+      // re-bind since the new window has its own document
+    });
+    // Wait for the new window to load, then trigger print
+    w.onload = function() {
+      w.focus();
+      // Small delay to ensure rendering is complete
+      setTimeout(function() {
+        w.print();
+      }, 300);
+    };
+  } else {
+    showToast('弹出窗口被拦截，请允许本站弹窗后重试', false);
+  }
+  // URL will be revoked when the popup closes; or we can do it after a delay
+  setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+}
+
+function buildResumeHTML() {
+  const d = getResumeData();
+
+  function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function formatPeriod(start, end) {
+    if (start && end) return esc(start) + ' — ' + esc(end);
+    if (start) return esc(start);
+    if (end) return esc(end);
+    return '';
+  }
+
+  function section(title) {
+    return '<div class="section"><h2>' + esc(title) + '</h2><hr></div>';
+  }
+
+  function fieldRow(label, value, cls) {
+    if (!value) return '';
+    return '<div class="row"><span class="label">' + esc(label) + '</span><span class="value' + (cls ? ' ' + cls : '') + '">' + esc(value) + '</span></div>';
+  }
+
+  function entryCard(period, lines, cls) {
+    var h = '<div class="entry' + (cls ? ' ' + cls : '') + '">';
+    if (period) h += '<div class="entry-period">' + period + '</div>';
+    if (lines.length) {
+      h += '<ul>';
+      lines.forEach(function(l) {
+        if (l.trim()) h += '<li>' + esc(l.trim()) + '</li>';
+      });
+      h += '</ul>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  function multiEntryCard(title, subtitle, lines, cls, extraHTML) {
+    var h = '<div class="entry' + (cls ? ' ' + cls : '') + '">';
+    h += '<div class="entry-header"><strong>' + esc(title) + '</strong>';
+    if (extraHTML) h += ' ' + extraHTML;
+    if (subtitle) h += ' <span class="entry-sub">' + esc(subtitle) + '</span>';
+    h += '</div>';
+    if (lines.length) {
+      h += '<ul>';
+      lines.forEach(function(l) {
+        if (l.trim()) h += '<li>' + esc(l.trim()) + '</li>';
+      });
+      h += '</ul>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  var infoLines = [];
+  if (d.info.name)    infoLines.push(fieldRow('姓名', d.info.name));
+  if (d.info.gender)  infoLines.push(fieldRow('性别', d.info.gender));
+  if (d.info.birth)   infoLines.push(fieldRow('出生年月', d.info.birth));
+  if (d.info.phone)   infoLines.push(fieldRow('手机', d.info.phone));
+  if (d.info.email)   infoLines.push(fieldRow('邮箱', d.info.email));
+  if (d.info.location) infoLines.push(fieldRow('所在地', d.info.location));
+  if (d.info.target)  infoLines.push(fieldRow('求职意向', d.info.target, 'highlight'));
+
+  var html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>' + esc(activeProfile().name || '简历') + '</title>';
+  html += '<style>';
+  html += '*{margin:0;padding:0;box-sizing:border-box;}';
+  html += 'body{font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;font-size:13px;color:#141933;line-height:1.75;max-width:780px;margin:0 auto;padding:40px 48px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
+  html += 'h1{font-size:26px;font-weight:700;text-align:center;margin-bottom:6px;letter-spacing:1px;}';
+  html += '.section{margin-top:28px;margin-bottom:10px;}';
+  html += '.section h2{font-size:16px;font-weight:700;color:#0068FF;margin-bottom:4px;}';
+  html += 'hr{border:none;border-top:2px solid #0068FF;margin-bottom:12px;}';
+  html += '.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:8px;}';
+  html += '.info-grid .row{display:flex;gap:6px;}';
+  html += '.info-grid .label{color:#5A5F7A;flex:0 0 64px;text-align:right;}';
+  html += '.info-grid .value{flex:1;}';
+  html += '.info-grid .highlight{color:#0068FF;font-weight:600;}';
+  html += '.entry{margin-bottom:12px;page-break-inside:avoid;}';
+  html += '.entry-header{margin-bottom:2px;}';
+  html += '.entry-header strong{font-size:13.5px;}';
+  html += '.entry-sub{color:#5A5F7A;font-size:12px;margin-left:8px;}';
+  html += '.entry-period{color:#0068FF;font-size:11.5px;font-weight:500;margin-bottom:2px;}';
+  html += 'ul{margin:2px 0 0 18px;}';
+  html += 'li{font-size:12.5px;margin-bottom:1px;color:#333;}';
+  html += '.skill-row{margin-bottom:2px;}';
+  html += '.skill-row strong{font-size:13px;}';
+  html += '.summary-text{font-size:12.5px;line-height:1.8;color:#333;margin-top:6px;}';
+
+  html += '@media print{';
+  html += 'body{padding:30px 36px;}';
+  html += '@page{margin:20mm 18mm;size:A4;}';
+  html += '}';
+  html += '</style></head><body>';
+
+  // Title
+  html += '<h1>' + esc(activeProfile().name || '个人简历') + '</h1>';
+
+  // Basic Info
+  html += section('基本信息');
+  html += '<div class="info-grid">' + infoLines.join('') + '</div>';
+
+  // Education
+  if (d.education.length && d.education.some(function(e) { return e.school || e.major; })) {
+    html += section('教育背景');
+    d.education.forEach(function(e) {
+      var period = formatPeriod(e.start_time, e.end_time);
+      var title = esc(e.school || '') + (e.major ? ' | ' + esc(e.major) : '') + (e.degree ? ' | ' + esc(e.degree) : '');
+      html += multiEntryCard(title, period, (e.detail || '').split('\n'), 'edu');
+    });
+  }
+
+  // Internship
+  if (d.internship.length && d.internship.some(function(e) { return e.company || e.role; })) {
+    html += section('实习经历');
+    d.internship.forEach(function(e) {
+      var period = formatPeriod(e.start_time, e.end_time);
+      var title = esc(e.company || '') + (e.role ? ' | ' + esc(e.role) : '');
+      html += multiEntryCard(title, period, (e.detail || '').split('\n'));
+    });
+  }
+
+  // Competitions
+  if (d.competitions && d.competitions.length && d.competitions.some(function(e) { return e.name; })) {
+    html += section('赛事经历');
+    d.competitions.forEach(function(e) {
+      var period = formatPeriod(e.start_time, e.end_time);
+      var title = esc(e.name || '') + (e.role ? ' | ' + esc(e.role) : '');
+      html += multiEntryCard(title, period, (e.detail || '').split('\n'));
+    });
+  }
+
+  // Projects
+  if (d.projects.length && d.projects.some(function(e) { return e.name; })) {
+    html += section('项目经历');
+    d.projects.forEach(function(e) {
+      var period = formatPeriod(e.start_time, e.end_time);
+      var title = esc(e.name || '') + (e.role ? ' | ' + esc(e.role) : '');
+      html += multiEntryCard(title, period, (e.detail || '').split('\n'));
+    });
+  }
+
+  // Skills
+  if (d.skills.length && d.skills.some(function(s) { return s.category || s.items; })) {
+    html += section('技能');
+    d.skills.forEach(function(s) {
+      if (s.category || s.items) {
+        html += '<div class="skill-row"><strong>' + esc(s.category || '') + '</strong>：' + esc(s.items || '') + '</div>';
+      }
+    });
+  }
+
+  // Awards
+  if (d.awards.length && d.awards.some(function(a) { return a.detail; })) {
+    html += section('荣誉奖项');
+    html += '<ul>';
+    d.awards.forEach(function(a) {
+      if (a.detail) html += '<li>' + esc(a.detail) + '</li>';
+    });
+    html += '</ul>';
+  }
+
+  // Papers
+  if (d.papers && d.papers.length && d.papers.some(function(p) { return p.name; })) {
+    html += section('论文/专利');
+    d.papers.forEach(function(p) {
+      var outcomeHTML = p.outcome ? '<span class="entry-sub">[' + esc(p.outcome) + ']</span>' : '';
+      html += multiEntryCard(p.name || '', '', (p.description || '').split('\n'), '', outcomeHTML);
+    });
+  }
+
+  // Summary
+  if (d.summary) {
+    html += section('自我评价');
+    html += '<div class="summary-text">' + esc(d.summary).replace(/\n/g, '<br>') + '</div>';
+  }
+
+  html += '</body></html>';
+  return html;
 }
 
 function importMD() {
