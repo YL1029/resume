@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>简历编辑器 — Resume Editor</title>
+<style>
+  /* ===== CSS Variables (DJI-inspired theme) ===== */
+  :root {
+    --brandColor: #0068FF;
+    --brandColorRGB: 0, 104, 255;
+    --brandColorLight: #E8F1FF;
+    --brandColorHover: #0052CC;
+    --cardRadius: 12px;
+    --buttonRadius: 8px;
+    --textPrimary: #141933;
+    --textSecondary: #5A5F7A;
+    --textTertiary: #9095B0;
+    --borderColor: #E5E7F0;
+    --bgPage: #F5F6FA;
+    --bgCard: #FFFFFF;
+    --dangerColor: #EF4444;
+    --dangerLight: #FEF2F2;
+    --shadowCard: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadowCardHover: 0 4px 12px rgba(0,0,0,0.08);
+    --fontStack: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: var(--fontStack);
+    color: var(--textPrimary);
+    background: var(--bgPage);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ===== Top Navigation Bar ===== */
+  .navbar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bgCard);
+    border-bottom: 1px solid var(--borderColor);
+    padding: 0 32px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .navbar-brand {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 1.1rem; font-weight: 600; color: var(--textPrimary);
+  }
+  .navbar-brand .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--brandColor);
+    box-shadow: 0 0 0 4px var(--brandColorLight);
+  }
+  .navbar-brand span { letter-spacing: -0.3px; }
+
+  .navbar-actions { display: flex; align-items: center; gap: 10px; }
+
+  /* ===== Buttons ===== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 20px; border-radius: var(--buttonRadius);
+    font-size: 0.9rem; font-weight: 500; cursor: pointer;
+    border: 1px solid transparent; transition: var(--transition);
+    font-family: inherit; white-space: nowrap;
+    user-select: none; outline: none;
+  }
+  .btn-primary { background: var(--brandColor); color: #fff; border-color: var(--brandColor); }
+  .btn-primary:hover { background: var(--brandColorHover); border-color: var(--brandColorHover); }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-outline { background: transparent; color: var(--brandColor); border-color: var(--brandColor); }
+  .btn-outline:hover { background: var(--brandColorLight); }
+  .btn-ghost { background: transparent; color: var(--textSecondary); border-color: transparent; }
+  .btn-ghost:hover { background: var(--borderColor); color: var(--textPrimary); }
+  .btn-sm { padding: 5px 14px; font-size: 0.82rem; }
+  .btn-xs { padding: 2px 10px; font-size: 0.78rem; border-radius: 6px; }
+  .btn-danger { color: var(--dangerColor); }
+  .btn-danger:hover { background: var(--dangerLight); }
+  .btn .icon { font-size: 1.1em; line-height: 1; }
+
+  /* ===== Main Layout ===== */
+  .main-container {
+    max-width: 860px; margin: 0 auto; padding: 28px 24px 60px;
+  }
+
+  /* ===== Section Cards ===== */
+  .section-card {
+    background: var(--bgCard);
+    border-radius: var(--cardRadius);
+    box-shadow: var(--shadowCard);
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: var(--transition);
+  }
+  .section-card:hover { box-shadow: var(--shadowCardHover); }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--borderColor);
+    cursor: pointer; user-select: none;
+  }
+  .section-header:hover { background: #FAFBFC; }
+  .section-header-left {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 0.95rem; color: var(--textPrimary);
+  }
+  .section-header-left .section-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--brandColorLight); color: var(--brandColor);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem;
+  }
+  .section-header-right {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--textTertiary); font-size: 0.8rem;
+  }
+  .section-header .entry-count {
+    background: var(--bgPage); padding: 2px 8px; border-radius: 20px;
+    font-size: 0.75rem; color: var(--textSecondary); font-weight: 500;
+  }
+  .section-header .collapse-arrow {
+    color: var(--textTertiary); font-size: 0.75rem;
+    transition: transform 0.25s ease;
+  }
+  .section-card.collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .section-card.collapsed .section-body { display: none; }
+
+  .section-body { padding: 20px 24px; }
+
+  /* ===== Editable Fields ===== */
+  .field-group { display: flex; flex-direction: column; gap: 14px; }
+  .field-row {
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .field-row .field-label {
+    flex: 0 0 90px; padding-top: 8px;
+    font-size: 0.85rem; color: var(--textSecondary);
+    font-weight: 500; text-align: right;
+  }
+  .field-row .field-value { flex: 1; position: relative; }
+
+  /* ---- Time range: two inputs side-by-side ---- */
+  .time-range {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .time-range .field-input { flex: 1; }
+  .time-range .time-sep {
+    color: var(--textTertiary); font-size: 0.85rem;
+    flex: none; padding: 0 2px;
+  }
+
+  /* ---- Single-line input ---- */
+  .field-input {
+    width: 100%; padding: 8px 12px;
+    border: 1.5px solid transparent;
+    border-radius: 6px; font-size: 0.9rem;
+    font-family: inherit; color: var(--textPrimary);
+    background: transparent;
+    transition: var(--transition);
+    outline: none;
+    line-height: 1.5;
+  }
+  .field-input:hover { border-color: var(--borderColor); background: #FAFBFC; }
+  .field-input:focus { border-color: var(--brandColor); background: #fff; box-shadow: 0 0 0 3px rgba(var(--brandColorRGB),0.08); }
+  .field-input::placeholder { color: var(--textTertiary); }
+
+  /* ---- Multi-line textarea ---- */
+  .field-textarea {
+    width: 100%; min-height: 64px; padding: 8px 12px;
+    border: 1.5px solid transparent;
+    border-radius: 6px; font-size: 0.9rem;
+    font-family: inherit; color: var(--textPrimary);
+    background: transparent; resize: vertical;
+    transition: var(--transition); outline: none;
+    line-height: 1.7;
+  }
+  .field-textarea:hover { border-color: var(--borderColor); background: #FAFBFC; }
+  .field-textarea:focus { border-color: var(--brandColor); background: #fff; box-shadow: 0 0 0 3px rgba(var(--brandColorRGB),0.08); }
+  .field-textarea::placeholder { color: var(--textTertiary); }
+
+  /* ---- Subsection (each entry card) ---- */
+  .subsection {
+    border: 1px solid var(--borderColor);
+    border-radius: 8px; padding: 16px 18px;
+    margin-bottom: 10px; position: relative;
+    background: #FAFBFC;
+  }
+  .subsection .subsection-index {
+    position: absolute; top: -9px; left: 14px;
+    background: var(--brandColorLight); color: var(--brandColor);
+    font-size: 0.72rem; font-weight: 600; padding: 1px 10px;
+    border-radius: 10px; letter-spacing: 0.5px;
+  }
+  .subsection .subsection-fields {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 4px;
+  }
+  .subsection-actions {
+    position: absolute; top: 8px; right: 12px;
+    display: flex; gap: 4px; opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .subsection:hover .subsection-actions { opacity: 1; }
+
+  /* ---- Add button ---- */
+  .add-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 6px; padding: 6px 12px;
+    color: var(--brandColor); font-size: 0.82rem; cursor: pointer;
+    border: 1px dashed var(--brandColor);
+    border-radius: 6px; background: transparent;
+    transition: var(--transition); font-family: inherit;
+  }
+  .add-btn:hover { background: var(--brandColorLight); }
+
+  /* ===== Toast / Save Indicator ===== */
+  .toast {
+    position: fixed; top: 72px; right: 24px; z-index: 200;
+    background: var(--textPrimary); color: #fff;
+    padding: 10px 20px; border-radius: 8px; font-size: 0.85rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    pointer-events: none; opacity: 0; transform: translateY(-8px);
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: #16A34A; }
+  .toast.info { background: var(--brandColor); }
+  .toast.error { background: var(--dangerColor); }
+
+  /* ===== Profile Selector ===== */
+  .profile-area {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .profile-select {
+    appearance: none; -webkit-appearance: none;
+    padding: 6px 28px 6px 12px; border-radius: 6px;
+    border: 1.5px solid var(--borderColor);
+    font-size: 0.85rem; font-family: inherit; font-weight: 500;
+    color: var(--textPrimary); background: #fff;
+    cursor: pointer; outline: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239095B0'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    transition: var(--transition); max-width: 160px;
+  }
+  .profile-select:hover { border-color: var(--brandColor); }
+  .profile-select:focus { border-color: var(--brandColor); box-shadow: 0 0 0 3px rgba(var(--brandColorRGB),0.08); }
+
+  .btn-icon-circle {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--borderColor); background: #fff;
+    font-size: 0.9rem; cursor: pointer; transition: var(--transition);
+    color: var(--textSecondary); flex: none;
+  }
+  .btn-icon-circle:hover { background: var(--brandColorLight); color: var(--brandColor); border-color: var(--brandColor); }
+  .btn-icon-circle.danger:hover { background: var(--dangerLight); color: var(--dangerColor); border-color: var(--dangerColor); }
+
+  /* ===== Modal (delete confirmation) ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(20, 25, 51, 0.45);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal-dialog {
+    background: var(--bgCard); border-radius: 14px;
+    padding: 28px 32px 24px; max-width: 400px; width: 90%;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+    text-align: center;
+  }
+  .modal-dialog h3 { font-size: 1.05rem; margin-bottom: 8px; color: var(--textPrimary); }
+  .modal-dialog p { font-size: 0.88rem; color: var(--textSecondary); margin-bottom: 24px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+  /* ===== Unsaved indicator ===== */
+  .unsaved-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #F97316; display: none;
+  }
+  .has-unsaved .unsaved-dot { display: inline-block; }
+
+  /* ===== Empty state ===== */
+  .empty-hint {
+    color: var(--textTertiary); font-size: 0.85rem;
+    font-style: italic; padding: 8px 0; text-align: center;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 640px) {
+    .navbar { padding: 0 16px; height: 50px; }
+    .navbar-brand { font-size: 0.95rem; }
+    .main-container { padding: 16px 12px 40px; }
+    .section-body { padding: 14px 16px; }
+    .section-header { padding: 12px 16px; }
+    .field-row { flex-direction: column; gap: 4px; }
+    .field-row .field-label { text-align: left; padding-top: 0; flex: none; }
+    .time-range { flex-direction: column; gap: 6px; }
+    .time-range .time-sep { display: none; }
+    .subsection { padding: 12px 14px; }
+    .btn { padding: 7px 14px; font-size: 0.82rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="dot"></div>
+    <span>简历编辑器</span>
+  </div>
+  <div class="profile-area">
+    <select class="profile-select" id="profileSelect" onchange="switchProfile(this.value)" title="选择档案"></select>
+    <button class="btn-icon-circle" onclick="createProfile()" title="新建档案">+</button>
+    <button class="btn-icon-circle danger" onclick="confirmDeleteProfile()" title="删除当前档案">🗑</button>
+  </div>
+  <div class="navbar-actions">
+    <button class="btn btn-ghost btn-sm" onclick="importMD()" title="从 .md 文件导入">
+      <span class="icon">📂</span> 导入
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="exportMD()" title="导出为 .md 文件">
+      <span class="icon">📥</span> 导出
+    </button>
+    <button class="btn btn-primary btn-sm has-unsaved" id="saveBtn" onclick="saveResume()" title="保存到本地存储">
+      <span class="icon">💾</span> 保存
+      <span class="unsaved-dot"></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== DELETE CONFIRMATION MODAL ===== -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-dialog">
+    <h3>确认删除档案？</h3>
+    <p id="deleteModalMsg">确定要删除档案「<strong>XXX</strong>」吗？<br>此操作不可撤销。</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeDeleteModal()">取消</button>
+      <button class="btn btn-primary btn-sm" id="confirmDeleteBtn" style="background:var(--dangerColor);border-color:var(--dangerColor);">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="importFileInput" accept=".md,.txt" style="display:none" onchange="handleImport(event)">
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-container" id="mainContainer">
+  <!-- Sections rendered by JS -->
+</div>
+
+<script>
+// ======================================================================
+//  DATA MODEL — each list section has: start_time, end_time, + fields
+// ======================================================================
+const DEFAULT_DATA = {
+  info: {
+    name: '张三',
+    gender: '男',
+    birth: '2000年1月',
+    phone: '138-0000-0000',
+    email: 'zhangsan@example.com',
+    location: '广东省·深圳市',
+    target: '嵌入式工程师'
+  },
+  education: [
+    { start_time: '2022.09', end_time: '2026.06', school: '南京航空航天大学',
+      major: '自动化', degree: '本科', detail: 'GPA：3.8/4.0（专业前10%）' }
+  ],
+  internship: [
+    { start_time: '2025.06', end_time: '2025.09', company: '某某科技有限公司',
+      role: '嵌入式软件实习生',
+      detail: '参与基于STM32的电机控制项目，负责驱动开发和调试\n使用C语言完成传感器数据采集模块，采样精度提升15%\n编写技术文档和测试报告，协助团队完成产品迭代' }
+  ],
+  competitions: [
+    { start_time: '2023.07', end_time: '2023.09', name: '全国大学生电子设计竞赛',
+      role: '队长/硬件设计',
+      detail: '选题"智能小车控制系统"，完成电路设计、传感器选型和代码编写\n带队完成作品制作与答辩，获省级二等奖\n负责方案设计、PCB布局及系统调试' }
+  ],
+  projects: [
+    { start_time: '2024.03', end_time: '2024.06', name: '智能小车控制系统',
+      role: '项目负责人',
+      detail: '基于STM32F407设计硬件电路和PCB布局\n实现PID控制算法、蓝牙通信、红外避障等功能\n获得校级优秀毕业设计' }
+  ],
+  skills: [
+    { category: '编程语言', items: 'C/C++、Python、Verilog' },
+    { category: '嵌入式平台', items: 'STM32、Arduino、FPGA' },
+    { category: '工具', items: 'Keil、Altium Designer、MATLAB、Git' },
+    { category: '协议', items: 'UART、SPI、I2C、CAN' }
+  ],
+  awards: [
+    { detail: '全国大学生电子设计竞赛 省二等奖' },
+    { detail: '校级优秀学生奖学金（2022-2025）' }
+  ],
+  papers: [
+    { name: '基于STM32的智能小车控制系统设计', description: '设计并实现了一套完整的智能小车控制系统，包括硬件电路设计、传感器融合和PID控制算法', outcome: '校级优秀毕业设计 / 专利申请中' }
+  ],
+  summary: '热爱嵌入式技术，具备扎实的C/C++编程基础和硬件调试能力。善于团队协作，具备良好的沟通表达能力和快速学习能力。对无人机和机器人技术充满热情，期待在实践中不断成长。'
+};
+
+const EMPTY_DATA = {
+  info: {
+    name: '', gender: '', birth: '',
+    phone: '', email: '', location: '', target: ''
+  },
+  education: [],
+  internship: [],
+  competitions: [],
+  projects: [],
+  skills: [],
+  awards: [],
+  papers: [],
+  summary: ''
+};
+
+// ======================================================================
+//  MULTI-PROFILE SYSTEM
+// ======================================================================
+const PROFILES_KEY = 'resume_editor_profiles';
+let profiles = null;    // { currentId: '...', list: [{ id, name, data }] }
+let dirty = false;
+
+function generateId() { return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7); }
+
+function activeProfile() { return profiles.list.find(p => p.id === profiles.currentId); }
+
+function getResumeData() { return activeProfile().data; }
+
+function loadProfiles() {
+  try {
+    const raw = localStorage.getItem(PROFILES_KEY);
+    if (raw) {
+      profiles = JSON.parse(raw);
+      // Ensure currentId points to an existing profile
+      if (!profiles.list.find(p => p.id === profiles.currentId)) {
+        profiles.currentId = profiles.list[0]?.id || null;
+      }
+      return true;
+    }
+  } catch(e) { /* ignore */ }
+  return false;
+}
+
+function saveProfiles() {
+  try {
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+    dirty = false;
+    updateSaveBtnState();
+    return true;
+  } catch(e) {
+    showToast('保存失败：存储空间不足', false);
+    return false;
+  }
+}
+
+function createDefaultProfile() {
+  const id = generateId();
+  profiles = {
+    currentId: id,
+    list: [{ id, name: '我的简历', data: JSON.parse(JSON.stringify(EMPTY_DATA)) }]
+  };
+  saveProfiles();
+  return id;
+}
+
+function saveToStorage() { return saveProfiles(); }
+
+function deepMerge(base, overlay) {
+  for (const key in overlay) {
+    if (overlay[key] && typeof overlay[key] === 'object' && !Array.isArray(overlay[key])) {
+      if (!base[key]) base[key] = {};
+      deepMerge(base[key], overlay[key]);
+    } else {
+      base[key] = overlay[key];
+    }
+  }
+  return base;
+}
+
+// ======================================================================
+//  BUILD UI HELPERS
+// ======================================================================
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'className') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'dataset') Object.assign(el.dataset, v);
+    else el.setAttribute(k, v);
+  }
+  for (const c of children) {
+    if (c == null) continue;
+    el.append(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  return el;
+}
+
+function sectionIcon(emoji) {
+  return h('div', { className: 'section-icon' }, emoji);
+}
+
+function makeCollapsibleCard(icon, title, bodyEl, collapsed, entryCount) {
+  const headerRight = h('div', { className: 'section-header-right' });
+  if (entryCount !== undefined) {
+    headerRight.appendChild(h('span', { className: 'entry-count' }, entryCount + ' 项'));
+  }
+  headerRight.appendChild(h('span', { className: 'collapse-arrow' }, '▼'));
+
+  const header = h('div', { className: 'section-header' },
+    h('div', { className: 'section-header-left' }, sectionIcon(icon), title),
+    headerRight
+  );
+  const body = h('div', { className: 'section-body' }, bodyEl);
+  const card = h('div', { className: 'section-card' + (collapsed ? ' collapsed' : '') }, header, body);
+
+  header.addEventListener('click', (e) => {
+    // Don't collapse if clicking a button inside
+    if (e.target.tagName === 'BUTTON') return;
+    card.classList.toggle('collapsed');
+  });
+  return card;
+}
+
+// ---- Field builders ----
+function fieldRow(label, inputEl) {
+  return h('div', { className: 'field-row' },
+    h('div', { className: 'field-label' }, label),
+    h('div', { className: 'field-value' }, inputEl)
+  );
+}
+
+function textInput(value, placeholder, onChange) {
+  const inp = h('input', {
+    className: 'field-input', type: 'text', value: value || '',
+    placeholder: placeholder || '', oninput: () => { onChange(inp.value); markDirty(); }
+  });
+  return inp;
+}
+
+function textArea(value, placeholder, onChange) {
+  const ta = h('textarea', {
+    className: 'field-textarea', placeholder: placeholder || '',
+    oninput: () => { onChange(ta.value); markDirty(); ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  });
+  ta.value = value || '';
+  requestAnimationFrame(() => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
+  return ta;
+}
+
+// ---- Time range: start ~ end side-by-side ----
+function timeRangeRow(label, startVal, endVal, startPH, endPH, onStart, onEnd) {
+  const range = h('div', { className: 'time-range' },
+    textInput(startVal, startPH || '开始时间', onStart),
+    h('span', { className: 'time-sep' }, '—'),
+    textInput(endVal, endPH || '结束时间', onEnd)
+  );
+  return fieldRow(label, range);
+}
+
+// ---- Subsection (entry card with index badge) ----
+function makeSubsection(index, removeFn) {
+  const el = h('div', { className: 'subsection' },
+    h('span', { className: 'subsection-index' }, '#' + (index + 1))
+  );
+  if (removeFn) {
+    const actions = h('div', { className: 'subsection-actions' },
+      h('button', { className: 'btn btn-ghost btn-xs btn-danger', onclick: (e) => { e.stopPropagation(); removeFn(); } }, '✕ 删除')
+    );
+    el.appendChild(actions);
+  }
+  const fields = h('div', { className: 'subsection-fields' });
+  el.appendChild(fields);
+  return { el, fields };
+}
+
+function addButton(text, onclick) {
+  return h('button', { className: 'add-btn', onclick }, '+ ' + text);
+}
+
+function markDirty() {
+  dirty = true;
+  updateSaveBtnState();
+}
+
+// ======================================================================
+//  PROFILE CRUD
+// ======================================================================
+function refreshProfileSelect() {
+  const sel = document.getElementById('profileSelect');
+  if (!sel) return;
+  sel.innerHTML = '';
+  profiles.list.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    if (p.id === profiles.currentId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function switchProfile(id) {
+  if (!id || id === profiles.currentId) return;
+  if (dirty) {
+    if (!confirm('当前档案有未保存的修改，切换将丢失修改。确定切换吗？')) return;
+  }
+  profiles.currentId = id;
+  dirty = false;
+  saveProfiles();
+  buildAllSections();
+  updateSaveBtnState();
+  refreshProfileSelect();
+}
+
+function createProfile() {
+  const name = (prompt('请输入新档案名称：', '新简历') || '').trim();
+  if (!name) return;
+  const id = generateId();
+  profiles.list.push({ id, name, data: JSON.parse(JSON.stringify(EMPTY_DATA)) });
+  profiles.currentId = id;
+  dirty = false;
+  saveProfiles();
+  buildAllSections();
+  updateSaveBtnState();
+  refreshProfileSelect();
+  showToast('已创建档案「' + name + '」', true);
+}
+
+function confirmDeleteProfile() {
+  if (profiles.list.length <= 1) {
+    showToast('至少保留一个档案', false);
+    return;
+  }
+  const p = activeProfile();
+  document.getElementById('deleteModalMsg').innerHTML =
+    '确定要删除档案「<strong>' + p.name + '</strong>」吗？<br>此操作不可撤销，档案内所有数据将永久丢失。';
+  document.getElementById('confirmDeleteBtn').onclick = deleteCurrentProfile;
+  document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('show');
+}
+
+function deleteCurrentProfile() {
+  closeDeleteModal();
+  const idx = profiles.list.findIndex(p => p.id === profiles.currentId);
+  if (idx === -1) return;
+  profiles.list.splice(idx, 1);
+  profiles.currentId = profiles.list[0]?.id || null;
+  dirty = false;
+  saveProfiles();
+  buildAllSections();
+  updateSaveBtnState();
+  refreshProfileSelect();
+  showToast('已删除档案', true);
+}
+
+function updateSaveBtnState() {
+  const btn = document.getElementById('saveBtn');
+  if (dirty) {
+    btn.classList.add('has-unsaved');
+  } else {
+    btn.classList.remove('has-unsaved');
+  }
+}
+
+// ======================================================================
+//  SECTION RENDERERS
+// ======================================================================
+
+// ---- 基本信息 ----
+function buildInfoSection() {
+  const d = getResumeData().info;
+  const rows = [
+    fieldRow('姓名',     textInput(d.name,     '你的姓名',               v => d.name = v)),
+    fieldRow('性别',     textInput(d.gender,   '性别',                    v => d.gender = v)),
+    fieldRow('出生年月', textInput(d.birth,    '出生年月',               v => d.birth = v)),
+    fieldRow('手机',     textInput(d.phone,    '手机号码',               v => d.phone = v)),
+    fieldRow('邮箱',     textInput(d.email,    '电子邮箱',               v => d.email = v)),
+    fieldRow('所在地',   textInput(d.location, '所在城市',               v => d.location = v)),
+    fieldRow('求职意向', textInput(d.target,   '期望职位',               v => d.target = v)),
+  ];
+  return makeCollapsibleCard('👤', '基本信息', h('div', { className: 'field-group' }, ...rows));
+}
+
+// ---- Generic list section (education / internship / projects) ----
+function buildListSection(icon, title, list, fieldConfig, emptyLabel, onAdd) {
+  const container = h('div', { className: 'field-group' });
+
+  function render() {
+    container.innerHTML = '';
+    if (list.length === 0) {
+      container.appendChild(h('div', { className: 'empty-hint' }, emptyLabel || '暂无内容，点击下方按钮添加'));
+    }
+
+    list.forEach((item, idx) => {
+      const { el, fields } = makeSubsection(idx, () => {
+        list.splice(idx, 1);
+        markDirty();
+        render();
+        refreshAllSectionCounts();
+      });
+
+      fieldConfig.forEach(cfg => {
+        if (cfg.type === 'timerange') {
+          fields.appendChild(timeRangeRow(
+            cfg.label,
+            item[cfg.startKey], item[cfg.endKey],
+            cfg.startPH, cfg.endPH,
+            v => item[cfg.startKey] = v,
+            v => item[cfg.endKey] = v
+          ));
+        } else if (cfg.type === 'input') {
+          fields.appendChild(fieldRow(cfg.label, textInput(item[cfg.key], cfg.placeholder || '', v => item[cfg.key] = v)));
+        } else if (cfg.type === 'textarea') {
+          fields.appendChild(fieldRow(cfg.label, textArea(item[cfg.key], cfg.placeholder || '', v => item[cfg.key] = v)));
+        }
+      });
+
+      container.appendChild(el);
+    });
+
+    container.appendChild(addButton(emptyLabel || '添加条目', () => {
+      const newItem = {};
+      fieldConfig.forEach(cfg => {
+        if (cfg.type === 'timerange') {
+          newItem[cfg.startKey] = '';
+          newItem[cfg.endKey] = '';
+        } else if (cfg.key) {
+          newItem[cfg.key] = '';
+        }
+      });
+      list.push(newItem);
+      markDirty();
+      render();
+      refreshAllSectionCounts();
+      container.querySelector('.subsection:last-of-type')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }));
+  }
+
+  render();
+  return { card: makeCollapsibleCard(icon, title, h('div', {}, container), false, list.length), _updateCount: () => list.length };
+}
+
+// ---- 技能 ----
+function buildSkillsSection() {
+  const list = getResumeData().skills;
+  const container = h('div', { className: 'field-group' });
+
+  function render() {
+    container.innerHTML = '';
+    list.forEach((item, idx) => {
+      const { el, fields } = makeSubsection(idx, () => {
+        list.splice(idx, 1);
+        markDirty();
+        render();
+        refreshAllSectionCounts();
+      });
+      fields.appendChild(fieldRow('类别', textInput(item.category, '技能类别', v => item.category = v)));
+      fields.appendChild(fieldRow('内容', textInput(item.items, '具体技能，用逗号分隔', v => item.items = v)));
+      container.appendChild(el);
+    });
+    container.appendChild(addButton('添加技能类别', () => {
+      list.push({ category: '', items: '' });
+      markDirty();
+      render();
+      refreshAllSectionCounts();
+    }));
+  }
+  render();
+  return { card: makeCollapsibleCard('🛠', '技能', h('div', {}, container), false, list.length), _updateCount: () => list.length };
+}
+
+// ---- 荣誉奖项 — detail only ----
+function buildAwardsSection() {
+  const list = getResumeData().awards;
+  const container = h('div', { className: 'field-group' });
+
+  function render() {
+    container.innerHTML = '';
+    if (list.length === 0) {
+      container.appendChild(h('div', { className: 'empty-hint' }, '暂无奖项，点击下方按钮添加'));
+    }
+
+    list.forEach((item, idx) => {
+      const { el, fields } = makeSubsection(idx, () => {
+        list.splice(idx, 1);
+        markDirty();
+        render();
+        refreshAllSectionCounts();
+      });
+      fields.appendChild(fieldRow('奖项', textArea(item.detail, '奖项名称', v => item.detail = v)));
+      container.appendChild(el);
+    });
+
+    container.appendChild(addButton('添加荣誉奖项', () => {
+      list.push({ detail: '' });
+      markDirty();
+      render();
+      refreshAllSectionCounts();
+    }));
+  }
+  render();
+  return { card: makeCollapsibleCard('🏆', '荣誉奖项', h('div', {}, container), false, list.length), _updateCount: () => list.length };
+}
+
+// ---- 论文/专利 ----
+function buildPapersSection() {
+  const list = getResumeData().papers;
+  const container = h('div', { className: 'field-group' });
+
+  function render() {
+    container.innerHTML = '';
+    if (list.length === 0) {
+      container.appendChild(h('div', { className: 'empty-hint' }, '暂无内容，点击下方按钮添加'));
+    }
+
+    list.forEach((item, idx) => {
+      const { el, fields } = makeSubsection(idx, () => {
+        list.splice(idx, 1);
+        markDirty();
+        render();
+        refreshAllSectionCounts();
+      });
+      fields.appendChild(fieldRow('名称', textInput(item.name, '论文标题 / 专利名称', v => item.name = v)));
+      fields.appendChild(fieldRow('描述', textArea(item.description, '论文摘要 / 专利简介', v => item.description = v)));
+      fields.appendChild(fieldRow('成果', textArea(item.outcome, '录用期刊 / 专利号 / 申请中', v => item.outcome = v)));
+      container.appendChild(el);
+    });
+
+    container.appendChild(addButton('添加论文/专利', () => {
+      list.push({ name: '', description: '', outcome: '' });
+      markDirty();
+      render();
+      refreshAllSectionCounts();
+    }));
+  }
+  render();
+  return { card: makeCollapsibleCard('📄', '论文/专利', h('div', {}, container), false, list.length), _updateCount: () => list.length };
+}
+
+// ---- 自我评价 ----
+function buildSummarySection() {
+  return makeCollapsibleCard('📝', '自我评价',
+    h('div', { className: 'field-group' },
+      textArea(getResumeData().summary, '简要描述你的优势、特点、职业规划...', v => { getResumeData().summary = v; })
+    )
+  );
+}
+
+// ======================================================================
+//  BUILD ALL & REFRESH COUNTS
+// ======================================================================
+let _sectionRefs = [];
+
+function buildAllSections() {
+  _sectionRefs = [];
+  const main = document.getElementById('mainContainer');
+  main.innerHTML = '';
+
+  function add(section) {
+    _sectionRefs.push(section);
+    main.appendChild(section.card || section);
+  }
+
+  add(buildInfoSection());
+
+  add(buildListSection('🎓', '教育背景', getResumeData().education, [
+    { type: 'timerange', label: '起止时间', startKey: 'start_time', endKey: 'end_time',
+      startPH: '入学时间（如 2022.09）', endPH: '毕业时间（如 2026.06）' },
+    { type: 'input', key: 'school', label: '学校', placeholder: '学校名称' },
+    { type: 'input', key: 'major', label: '专业', placeholder: '所学专业' },
+    { type: 'input', key: 'degree', label: '学位', placeholder: '本科 / 硕士 / 博士' },
+    { type: 'input', key: 'detail', label: '补充', placeholder: 'GPA、排名、主修课程等' },
+  ], '添加教育经历'));
+
+  add(buildListSection('💼', '实习经历', getResumeData().internship, [
+    { type: 'timerange', label: '起止时间', startKey: 'start_time', endKey: 'end_time',
+      startPH: '开始时间（如 2025.06）', endPH: '结束时间（如 2025.09）' },
+    { type: 'input', key: 'company', label: '公司', placeholder: '公司名称' },
+    { type: 'input', key: 'role', label: '职位', placeholder: '实习职位' },
+    { type: 'textarea', key: 'detail', label: '工作内容', placeholder: '描述你的工作内容和成果，每行一条' },
+  ], '添加实习经历'));
+
+  add(buildListSection('🏅', '赛事经历', getResumeData().competitions, [
+    { type: 'timerange', label: '起止时间', startKey: 'start_time', endKey: 'end_time',
+      startPH: '开始时间（如 2023.07）', endPH: '结束时间（如 2023.09）' },
+    { type: 'input', key: 'name', label: '名称', placeholder: '赛事名称' },
+    { type: 'input', key: 'role', label: '角色', placeholder: '队长 / 队员 / 个人参赛' },
+    { type: 'textarea', key: 'detail', label: '赛事描述', placeholder: '描述赛事内容、承担工作和取得成果，每行一条' },
+  ], '添加赛事经历'));
+
+  add(buildListSection('📁', '项目经历', getResumeData().projects, [
+    { type: 'timerange', label: '起止时间', startKey: 'start_time', endKey: 'end_time',
+      startPH: '开始时间（如 2024.03）', endPH: '结束时间（如 2024.06）' },
+    { type: 'input', key: 'name', label: '名称', placeholder: '项目名称' },
+    { type: 'input', key: 'role', label: '角色', placeholder: '项目负责人 / 核心成员 / 独立开发' },
+    { type: 'textarea', key: 'detail', label: '项目描述', placeholder: '描述项目背景、技术栈和个人贡献，每行一条' },
+  ], '添加项目经历'));
+
+  add(buildSkillsSection());
+  add(buildAwardsSection());
+  add(buildPapersSection());
+  add(buildSummarySection());
+
+  refreshSectionCounts();
+}
+
+function refreshAllSectionCounts() {
+  _sectionRefs.forEach(ref => {
+    if (ref._updateCount) {
+      const count = ref._updateCount();
+      const card = ref.card;
+      const cntEl = card.querySelector('.entry-count');
+      if (cntEl) cntEl.textContent = count + ' 项';
+    }
+  });
+}
+
+function refreshSectionCounts() {
+  refreshAllSectionCounts();
+}
+
+// ======================================================================
+//  SAVE, EXPORT, IMPORT
+// ======================================================================
+function formatPeriod(start, end) {
+  if (start && end) return start + ' - ' + end;
+  if (start) return start;
+  if (end) return end;
+  return '';
+}
+
+function buildMarkdown() {
+  const d = getResumeData();
+  let md = '# 个人简历\n\n---\n\n';
+
+  // Basic Info
+  md += '## 基本信息\n\n';
+  const infoFields = [
+    ['姓名', d.info.name], ['性别', d.info.gender], ['出生年月', d.info.birth],
+    ['手机', d.info.phone], ['邮箱', d.info.email], ['所在地', d.info.location],
+    ['求职意向', d.info.target]
+  ];
+  infoFields.forEach(([k, v]) => { if (v) md += `- **${k}**：${v}\n`; });
+
+  // Education
+  if (d.education.length) {
+    md += '\n---\n\n## 教育背景\n\n';
+    d.education.forEach(e => {
+      const period = formatPeriod(e.start_time, e.end_time);
+      md += `- **${period || '时间'}** | ${e.school || '学校'} | ${e.major || '专业'} | ${e.degree || '学位'}\n`;
+      if (e.detail) md += `  - ${e.detail}\n`;
+    });
+  }
+
+  // Internship
+  if (d.internship.length) {
+    md += '\n---\n\n## 实习经历\n\n';
+    d.internship.forEach(e => {
+      const period = formatPeriod(e.start_time, e.end_time);
+      md += `- **${period || '时间'}** | ${e.company || '公司'} | ${e.role || '职位'}\n`;
+      if (e.detail) {
+        e.detail.split('\n').forEach(line => {
+          if (line.trim()) md += `  - ${line.trim()}\n`;
+        });
+      }
+    });
+  }
+
+  // Competitions
+  if (d.competitions && d.competitions.length) {
+    md += '\n---\n\n## 赛事经历\n\n';
+    d.competitions.forEach(e => {
+      const period = formatPeriod(e.start_time, e.end_time);
+      md += `- **${e.name || '赛事'}** | ${e.role || '角色'} | ${period || '时间'}\n`;
+      if (e.detail) {
+        e.detail.split('\n').forEach(line => {
+          if (line.trim()) md += `  - ${line.trim()}\n`;
+        });
+      }
+    });
+  }
+
+  // Projects
+  if (d.projects.length) {
+    md += '\n---\n\n## 项目经历\n\n';
+    d.projects.forEach(e => {
+      const period = formatPeriod(e.start_time, e.end_time);
+      md += `- **${e.name || '项目'}** | ${e.role || '角色'} | ${period || '时间'}\n`;
+      if (e.detail) {
+        e.detail.split('\n').forEach(line => {
+          if (line.trim()) md += `  - ${line.trim()}\n`;
+        });
+      }
+    });
+  }
+
+  // Skills
+  if (d.skills.length && d.skills.some(s => s.category || s.items)) {
+    md += '\n---\n\n## 技能\n\n';
+    d.skills.forEach(s => {
+      if (s.category || s.items) md += `- **${s.category || '技能'}**：${s.items || ''}\n`;
+    });
+  }
+
+  // Awards
+  if (d.awards.length && d.awards.some(a => a.detail)) {
+    md += '\n---\n\n## 荣誉奖项\n\n';
+    d.awards.forEach(a => {
+      if (a.detail) md += `- ${a.detail}\n`;
+    });
+  }
+
+  // Papers
+  if (d.papers && d.papers.length && d.papers.some(p => p.name)) {
+    md += '\n---\n\n## 论文/专利\n\n';
+    d.papers.forEach(p => {
+      if (p.name) md += `- **${p.name}**\n`;
+      if (p.description) md += `  - ${p.description}\n`;
+      if (p.outcome) md += `  - 成果：${p.outcome}\n`;
+    });
+  }
+
+  // Summary
+  if (d.summary) {
+    md += '\n---\n\n## 自我评价\n\n';
+    md += d.summary + '\n';
+  }
+
+  return md;
+}
+
+function saveResume() {
+  if (saveToStorage()) {
+    showToast('已保存 ✓', true);
+  }
+}
+
+function exportMD() {
+  downloadMD('resume.md');
+  showToast('已导出 resume.md', true);
+}
+
+function downloadMD(filename) {
+  const md = buildMarkdown();
+  const blob = new Blob(['﻿' + md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'resume-data.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importMD() {
+  document.getElementById('importFileInput').click();
+}
+
+function handleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const mdText = e.target.result;
+    const parsed = parseMarkdown(mdText);
+    if (parsed) {
+      activeProfile().data = deepMerge(JSON.parse(JSON.stringify(DEFAULT_DATA)), parsed);
+      saveToStorage();
+      buildAllSections();
+      showToast('导入成功 ✓', true);
+    } else {
+      showToast('导入失败：无法解析文件', false);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function parseMarkdown(md) {
+  const data = { info: {}, education: [], internship: [], competitions: [], projects: [], skills: [], awards: [], papers: [], summary: '' };
+  const lines = md.split('\n');
+
+  let section = null;
+  let currentItem = null;
+  let i = 0;
+
+  while (i < lines.length) {
+    let line = lines[i].trim();
+
+    // Detect section headers
+    if (line.startsWith('## ') && line.includes('基本信息')) { section = 'info'; i++; continue; }
+    if (line.startsWith('## ') && line.includes('教育背景')) { section = 'education'; i++; continue; }
+    if (line.startsWith('## ') && line.includes('实习经历')) { section = 'internship'; i++; continue; }
+    if (line.startsWith('## ') && line.includes('赛事经历')) { section = 'competitions'; i++; continue; }
+    if (line.startsWith('## ') && line.includes('项目经历')) { section = 'projects'; i++; continue; }
+    if (line.startsWith('## ') && line.includes('技能')) { section = 'skills'; i++; continue; }
+    if (line.startsWith('## ') && line.includes('荣誉')) { section = 'awards'; i++; continue; }
+    if (line.startsWith('## ') && (line.includes('论文') || line.includes('专利'))) { section = 'papers'; i++; continue; }
+    if (line.startsWith('## ') && (line.includes('自我评价') || line.includes('个人评价'))) { section = 'summary'; i++; continue; }
+    if (line === '---' || line === '***' || line === '___') { i++; continue; }
+
+    // Parse list items
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      const itemText = line.replace(/^[-*]\s+/, '');
+
+      if (section === 'info') {
+        const match = itemText.match(/\*\*([^*]+)\*\*[：:]\s*(.*)/);
+        if (match) {
+          const key = match[1].trim();
+          const val = match[2].trim();
+          const keyMap = { '姓名': 'name', '性别': 'gender', '出生年月': 'birth', '手机': 'phone', '邮箱': 'email', '所在地': 'location', '求职意向': 'target' };
+          if (keyMap[key]) data.info[keyMap[key]] = val;
+        }
+      } else if (section === 'education' || section === 'internship' || section === 'competitions' || section === 'projects') {
+        // Main entry (starts with **period** or has bold markers)
+        const boldMatch = itemText.match(/\*\*([^*]+)\*\*/g);
+        if (boldMatch && boldMatch.length >= 1) {
+          const parts = itemText.split('|').map(s => s.replace(/\*+/g, '').trim());
+
+          if (section === 'education') {
+            currentItem = { start_time: '', end_time: '', school: '', major: '', degree: '', detail: '' };
+            const periodRaw = parts[0] || '';
+            const periodParts = periodRaw.split('-').map(s => s.trim());
+            currentItem.start_time = periodParts[0] || '';
+            currentItem.end_time = periodParts[1] || '';
+            if (parts.length >= 2) currentItem.school = parts[1];
+            if (parts.length >= 3) currentItem.major = parts[2];
+            if (parts.length >= 4) currentItem.degree = parts[3];
+            data.education.push(currentItem);
+          } else if (section === 'internship') {
+            currentItem = { start_time: '', end_time: '', company: '', role: '', detail: '' };
+            const periodRaw = parts[0] || '';
+            const periodParts = periodRaw.split('-').map(s => s.trim());
+            currentItem.start_time = periodParts[0] || '';
+            currentItem.end_time = periodParts[1] || '';
+            if (parts.length >= 2) currentItem.company = parts[1];
+            if (parts.length >= 3) currentItem.role = parts[2];
+            data.internship.push(currentItem);
+          } else if (section === 'competitions') {
+            currentItem = { start_time: '', end_time: '', name: '', role: '', detail: '' };
+            // Competition format: **name** | role | period
+            if (parts.length >= 1) currentItem.name = parts[0];
+            if (parts.length >= 2) currentItem.role = parts[1];
+            if (parts.length >= 3) {
+              const periodParts = parts[2].split('-').map(s => s.trim());
+              currentItem.start_time = periodParts[0] || '';
+              currentItem.end_time = periodParts[1] || '';
+            }
+            data.competitions.push(currentItem);
+          } else if (section === 'projects') {
+            currentItem = { start_time: '', end_time: '', name: '', role: '', detail: '' };
+            // Project format: **name** | role | period
+            if (parts.length >= 1) currentItem.name = parts[0];
+            if (parts.length >= 2) currentItem.role = parts[1];
+            if (parts.length >= 3) {
+              const periodParts = parts[2].split('-').map(s => s.trim());
+              currentItem.start_time = periodParts[0] || '';
+              currentItem.end_time = periodParts[1] || '';
+            }
+            data.projects.push(currentItem);
+          }
+        } else if (currentItem && itemText) {
+          // Sub-item (detail bullet)
+          currentItem.detail = (currentItem.detail ? currentItem.detail + '\n' : '') + itemText;
+        }
+      } else if (section === 'skills') {
+        const match = itemText.match(/\*\*([^*]+)\*\*[：:]\s*(.*)/);
+        if (match) {
+          data.skills.push({ category: match[1].trim(), items: match[2].trim() });
+        }
+      } else if (section === 'awards') {
+        // Award format: - detail
+        data.awards.push({ detail: itemText });
+      } else if (section === 'papers') {
+        // Papers format: - **name**  or  - detail or  - outcome
+        const boldMatch = itemText.match(/\*\*([^*]+)\*\*/);
+        if (boldMatch) {
+          // Main entry: **Paper Name**
+          currentItem = { name: boldMatch[1], description: '', outcome: '' };
+          data.papers.push(currentItem);
+        } else if (currentItem && itemText) {
+          const outcomeMatch = itemText.match(/^成果[：:]\s*(.*)/);
+          if (outcomeMatch) {
+            currentItem.outcome = outcomeMatch[1];
+          } else {
+            currentItem.description = (currentItem.description ? currentItem.description + '\n' : '') + itemText;
+          }
+        }
+      } else if (section === 'summary') {
+        data.summary += (data.summary ? '\n' : '') + itemText;
+      }
+    } else if (line && section === 'summary') {
+      // Non-bullet text in summary section
+      data.summary += (data.summary ? '\n' : '') + line;
+    }
+
+    i++;
+  }
+
+  return data;
+}
+
+// ======================================================================
+//  TOAST
+// ======================================================================
+let toastTimer;
+function showToast(msg, success) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  const cls = success === true ? 'success' : (success === false ? 'error' : 'info');
+  toast.className = 'toast ' + cls;
+  void toast.offsetWidth;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2000);
+}
+
+// ======================================================================
+//  KEYBOARD SHORTCUT: Ctrl+S
+// ======================================================================
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveResume();
+  }
+});
+
+// ======================================================================
+//  MODAL CLOSE ON ESC / OVERLAY CLICK
+// ======================================================================
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDeleteModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDeleteModal();
+});
+
+// ======================================================================
+//  INIT
+// ======================================================================
+(function init() {
+  const loaded = loadProfiles();
+  if (!loaded || !profiles.list.length) {
+    createDefaultProfile();
+  }
+  buildAllSections();
+  refreshProfileSelect();
+  if (loaded) {
+    console.log('已从本地存储加载档案数据');
+  }
+  updateSaveBtnState();
+})();
+</script>
+
+</body>
+</html>
