@@ -320,6 +320,7 @@
   <div class="profile-area">
     <select class="profile-select" id="profileSelect" onchange="switchProfile(this.value)" title="选择档案"></select>
     <button class="btn-icon-circle" onclick="createProfile()" title="新建档案">+</button>
+    <button class="btn-icon-circle" onclick="renameProfile()" title="重命名当前档案">✎</button>
     <button class="btn-icon-circle danger" onclick="confirmDeleteProfile()" title="删除当前档案">🗑</button>
   </div>
   <div class="navbar-actions">
@@ -633,6 +634,17 @@ function createProfile() {
   updateSaveBtnState();
   refreshProfileSelect();
   showToast('已创建档案「' + name + '」', true);
+}
+
+function renameProfile() {
+  const p = activeProfile();
+  const newName = (prompt('请输入新名称：', p.name) || '').trim();
+  if (!newName || newName === p.name) return;
+  p.name = newName;
+  dirty = false;
+  saveProfiles();
+  refreshProfileSelect();
+  showToast('已重命名为「' + newName + '」', true);
 }
 
 function confirmDeleteProfile() {
